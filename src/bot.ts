@@ -1,3 +1,4 @@
+require('dotenv').config();
 import { Bot, InlineKeyboard, webhookCallback } from "grammy";
 import { chunk } from "lodash";
 import express, { Request, Response } from "express";
@@ -109,10 +110,11 @@ app.post(`/webhook`, async (req: Request, res: Response) => {
 
 // Bot Server Start Logic
 if (process.env.NODE_ENV === 'production') {
+  console.log('Webhook URL from .env:', process.env.WEBHOOK_URL);
   app.use(express.json());
   app.use(webhookCallback(bot, 'express'));
   app.listen(PORT, () => console.log(`Bot listening on port ${PORT}`));
-  // bot.start();
+  bot.start();
 } else {
   bot.start();
   console.log('Bot started in long polling mode');

@@ -1,12 +1,17 @@
 import { Bot, InlineKeyboard, webhookCallback } from "grammy";
 import { chunk } from "lodash";
-import express from "express";
+import express, { Request, Response } from "express";
 import { applyTextEffect, Variant } from "./textEffects";
-
+import axios from 'axios';
 import type { Variant as TextEffectVariant } from "./textEffects";
 
 // Create a bot using the Telegram token
 const bot = new Bot(process.env.TELEGRAM_TOKEN || "");
+
+// global app instantiation
+const app = express();
+const PORT = process.env.PORT || 3005;
+app.use(express.json());
 
 // Handle the /yo command to greet the user
 bot.command("yo", (ctx) => ctx.reply(`Yo ${ctx.from?.username}`));
@@ -117,7 +122,7 @@ bot.inlineQuery(queryRegEx, async (ctx) => {
         title: "Text Effects",
         input_message_content: {
           message_text: `Original: ${originalText}
-Modified: ${modifiedText}`,
+            Modified: ${modifiedText}`,
           parse_mode: "HTML",
         },
         reply_markup: new InlineKeyboard().switchInline("Share", fullQuery),
@@ -159,20 +164,26 @@ const aboutUrlKeyboard = new InlineKeyboard().url(
 
 // Suggest commands in the menu
 bot.api.setMyCommands([
-  { command: "yo", description: "Be greeted by the bot" },
+  { command: "yo", 
+    description: "Be greeted by the bot"
+  },
   {
     command: "effect",
     description: "Apply text effects on the text. (usage: /effect [text])",
+  },
+  {
+    command: "webhook",
+    description: "Send data to webhook url. (usage: /webhook [args])",
   },
 ]);
 
 // Handle all other messages and the /start command
 const introductionMessage = `Hello! I'm a Telegram bot.
-I'm powered by Cyclic, the next-generation serverless computing platform.
 
 <b>Commands</b>
 /yo - Be greeted by me
-/effect [text] - Show a keyboard to apply text effects to [text]`;
+/effect [text] - Show a keyboard to apply text effects to [text]
+/webhook [args] - submit params data to webhook url`;
 
 const replyWithIntro = (ctx: any) =>
   ctx.reply(introductionMessage, {
@@ -181,16 +192,17 @@ const replyWithIntro = (ctx: any) =>
   });
 
 bot.command("start", replyWithIntro);
+bot.command("webhook", sendDataToWebhook2);
 bot.on("message", replyWithIntro);
 
-// Start the server
+// Start the TG server portion
 if (process.env.NODE_ENV === "production") {
   // Use Webhooks for the production server
   const app = express();
   app.use(express.json());
   app.use(webhookCallback(bot, "express"));
 
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.PORT || 3010;
   app.listen(PORT, () => {
     console.log(`Bot listening on port ${PORT}`);
   });
@@ -198,3 +210,51 @@ if (process.env.NODE_ENV === "production") {
   // Use Long Polling for development
   bot.start();
 }
+
+app.post('/webhook', (req: Request, res: Response) => {
+  try {
+    console.log('webhook hit');
+    console.log('data received: ', req.body);
+    res.status(200).send('Data received');
+    
+   } catch (error) {
+      console.error('Error occured: ', error);
+      res.status(500).send('internal server error');
+    }
+  });
+
+// func to actually send the data to the hook
+async function sendDataToWebhook(data: string) {
+  try {
+    const webhookUrl = 'http://localhost:3005/webhook';
+    await axios.post(webhookUrl, {data}, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    console.log('data sent to webhook');
+  } catch (error) {
+    console.error('Error occured: ', error);
+  }
+}
+
+async function sendDataToWebhook2(ctx: any) {
+  try {
+    const webhookUrl = 'http://localhost:3005/webhook';
+    await axios.post(webhookUrl, {data: ctx.match}, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    console.log('data sent to webhook');
+  } catch (error) {
+    console.error('Error occured: ', error);
+  }
+}
+
+sendDataToWebhook('Test data 12456_!@#$%^&*()_+');
+
+// start the webhook server portion
+app.listen(PORT, () => {
+  console.log(`Bot listening on port ${PORT}`);
+});

@@ -7,15 +7,15 @@ import type { Variant as TextEffectVariant } from "./textEffects";
 
 // Constants and Type Definitions
 const bot = new Bot(process.env.TELEGRAM_TOKEN || "");
-const app = express();
 const PORT = process.env.PORT || 3005;
+const webhookUrl = process.env.WEBHOOK_URL || 'http://localhost:3005/webhook';
+const app = express();
 const allEffects: { code: TextEffectVariant; label: string }[] = [
   { code: 'w', label: 'Monospace' }, { code: 'b', label: 'Bold' },
   { code: 'i', label: 'Italic' }, { code: 'd', label: 'Doublestruck' },
   { code: 'o', label: 'Circled' }, { code: 'q', label: 'Squared' }
 ];
-const webhookUrl = 'http://localhost:3005/webhook';
-const introductionMessage = `Hello! I'm a Telegram bot.;`;
+const introductionMessage = `Hello! I'm a Telegram bot to help facilitate utilizing Webhooks`;
 const aboutUrlKeyboard = new InlineKeyboard().url("Website URL", "https://www.google.com/");
 
 // Helper Functions
@@ -32,14 +32,14 @@ const textEffectResponse = (original: string, modified?: string) => `Original: $
 // Exception Handlers
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception: ', error);
-  // good spot to perform cleanup of operations / handles
-  // maybe restart automatically?
+  // todo: good spot to perform cleanup of operations / open handles
+  // todo: maybe restart automatically?
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // todo: more extensive logging here
+  // todo: more extensive logging here if desired
 });
 
 // Bot Command Handlers
@@ -126,17 +126,17 @@ async function sendDataToWebhook(data: string) {
   } catch (error) {
     if (axios.isAxiosError(error)) {
       console.error(error.response?.data);
-    if (error.response) {
-      console.error(`status:`, error.response.status);
-      console.error(`data:`, error.response.data);
-      console.error(`headers:`, error.response.headers);
-    } else if (error.request) {
-      console.error(`no response received:`, error.request);
+      if (error.response) {
+        console.error(`status:`, error.response.status);
+        console.error(`data:`, error.response.data);
+        console.error(`headers:`, error.response.headers);
+      } else if (error.request) {
+        console.error(`no response received:`, error.request);
+      } else {
+        console.error(`error setting up request:`, error.message);
+      }
     } else {
-      console.error(`error setting up request:`, error.message);
+      console.error('Error occured: ', error);
     }
-  } else {
-    console.error('Error occured: ', error);
-  }
   }
 }

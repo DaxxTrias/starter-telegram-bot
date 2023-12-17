@@ -112,8 +112,10 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.json());
   app.use(webhookCallback(bot, 'express'));
   app.listen(PORT, () => console.log(`Bot listening on port ${PORT}`));
+  // bot.start();
 } else {
   bot.start();
+  console.log('Bot started in long polling mode');
 }
 
 // Webhook Send Functions

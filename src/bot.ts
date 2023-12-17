@@ -16,7 +16,7 @@ const allEffects: { code: TextEffectVariant; label: string }[] = [
 ];
 const webhookUrl = 'http://localhost:3005/webhook';
 const introductionMessage = `Hello! I'm a Telegram bot.;`;
-const aboutUrlKeyboard = new InlineKeyboard().url("", "");
+const aboutUrlKeyboard = new InlineKeyboard().url("blah", "https://blah.sh/");
 const keyboard = new InlineKeyboard();
 
 // Helper Funcs
@@ -34,7 +34,8 @@ const textEffectResponse = (original: string, modified?: string) => `Original: $
 bot.command("yo", (ctx) => ctx.reply(`Yo ${ctx.from?.username}`));
 bot.command('effect', ctx => ctx.reply(textEffectResponse(ctx.match),
   { reply_markup: createInlineKeyboard(allEffects.map(e => e.code)) }));
-bot.command('start', ctx => ctx.reply(introductionMessage, { reply_markup: aboutUrlKeyboard, parse_mode: 'HTML' }));
+bot.command('start', ctx => ctx.reply(introductionMessage));
+// bot.on("message", ctx => ctx.reply(introductionMessage, {reply_markup: aboutUrlKeyboard, parse_mode: 'HTML'}));
 bot.command('webhook', ctx => sendDataToWebhook(ctx.match));
 
 // Handle inline queries
@@ -90,8 +91,14 @@ allEffects.forEach(effect => bot.callbackQuery(effectCallbackCodeAccessor(effect
   { reply_markup: createInlineKeyboard(allEffects.map(e => e.code).filter(code => code !== effect.code)) });
 }));
 
-// Route
-if (process.env.NODE_ENV === 'production') {
+// webhook route
+app.post(`/webhook`, async (req: Request, res: Response) => {
+  console.log(`webhook triggered: `, req.body);
+  res.status(200).send(`data recvd`);
+});
+
+// bot starter logic
+if (process.env.NODE_ENV === 'development') {
   app.use(express.json());
   app.use(webhookCallback(bot, 'express'));
   app.listen(PORT, () => console.log(`Bot listening on port ${PORT}`));
@@ -102,12 +109,27 @@ if (process.env.NODE_ENV === 'production') {
 // Webhook func
 async function sendDataToWebhook(data: string) {
   try {
-    await axios.post(webhookUrl, {data}, {
-      headers: {  'Content-Type': 'application/json' }
-    });
+    await axios.post(webhookUrl, { data }, { headers: {  'Content-Type': 'application/json' }});
     console.log('data sent to webhook');
-  }
-  catch (error) {
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error(error.response?.data);
+    if (error.response) {
+      console.error(`status:`, error.response.status);
+      console.error(`data:`, error.response.data);
+      console.error(`headers:`, error.response.headers);
+    } else if (error.request) {
+      console.error(`no response received:`, error.request);
+    } else {
+      console.error(`error setting up request:`, error.message);
+    }
+  } else {
     console.error('Error occured: ', error);
   }
+  }
 }
+
+// start the server portion
+app.listen(PORT, () => {
+  console.log(`Bot listening on port ${PORT}`);
+});

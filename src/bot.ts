@@ -56,7 +56,7 @@ const PORT = process.env.PORT || 3005;
 const app = express();
 const webhookUrl = process.env.WEBHOOK_URL || "http://localhost:3005/webhook";
 const introductionMessage = "Hello! I'm a Telegram bot to help facilitate utilizing Webhooks.";
-const aboutUrlKeyboard = new InlineKeyboard().url("Website URL", "https://www.google.com/");
+const aboutUrlKeyboard = new InlineKeyboard().url("DaxxTrias' github", "hhttps://github.com/DaxxTrias/telegram-webhook");
 
 // Exception Handlers
 process.on('uncaughtException', handleError);

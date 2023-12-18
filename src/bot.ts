@@ -22,21 +22,21 @@ if (!fs.existsSync(errorLogPath)) {
   fs.writeFileSync(errorLogPath, ''); // Create an empty log file if it does not exist
 }
 
-// initial env file validation
+// Initial env file validation
 if (!process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_TOKEN === "") {
   logErrorToFile("No Telegram token provided. Please set the TELEGRAM_TOKEN environment variable in the .env file.");
   console.warn("No Telegram token provided. Please set the TELEGRAM_TOKEN environment variable in the .env file.");
   process.exit(1);
 }
 
-// logging function
+// Logging function
 function logErrorToFile(error: string) {
   const timestamp = new Date().toISOString();
   const logMessage = `${timestamp}\n- ${error}\n`;
   fs.appendFileSync(errorLogPath, logMessage);
 }
 
-// Bot Constants and Type Definitions
+// TG Bot Constants and Type Definitions
 const bot = new Bot(process.env.TELEGRAM_TOKEN || "");
 const PORT = process.env.PORT || 3005;
 const webhookUrl = process.env.WEBHOOK_URL || "http://localhost:3005/webhook";
@@ -80,7 +80,6 @@ process.on('unhandledRejection', (reason, promise) => {
 bot.command('yo', (ctx) => ctx.reply(`Yo ${ctx.from?.username}`));
 bot.command('effect', ctx => ctx.reply(textEffectResponse(ctx.match), { reply_markup: createInlineKeyboard(allEffects.map(e => e.code)) }));
 bot.command('start', ctx => ctx.reply(introductionMessage, {reply_markup: aboutUrlKeyboard, parse_mode: 'HTML'}));
-// bot.command('webhook', ctx => sendDataToWebhook(ctx.match));
 bot.command('webhook', async ctx => {
   const chatId = ctx.chat.id; // Get the chat ID of the user
   const data = ctx.match; // Get the data supplied to the command)
@@ -122,7 +121,7 @@ bot.inlineQuery(/effect (monospace|bold|italic) (.*)/, async (ctx) => {
   ], { cache_time: 30 * 24 * 3600 });
 });
 
-// Parse the text effect response
+// TextEffect Callback Handler
 const parseTextEffectResponse = (response: string): { originalText: string, modifiedText?: string } => {
   const originalTextMatch = response.match(/Original: (.*)/);
   const modifiedTextWatch = response.match(/Modified: (.*)/);
@@ -133,7 +132,7 @@ const parseTextEffectResponse = (response: string): { originalText: string, modi
   };
 };
 
-// callback handler
+// Callback Handler for special text effects
 allEffects.forEach(effect => bot.callbackQuery(effectCallbackCodeAccessor(effect.code), async ctx => {
   // keyboard.text(effect.label, `callback_data:${effect.code}`).row();
   const { originalText } = parseTextEffectResponse(ctx.msg?.text || '');
@@ -148,7 +147,7 @@ app.post(`/webhook`, async (req: Request, res: Response) => {
   res.status(200).send(`data recvd`);
 });
 
-// Webhook Send Functions
+// Webhook Send Function
 async function sendDataToWebhook(data: string, chatId: number) {
   try {
     const headers = {
@@ -164,40 +163,37 @@ async function sendDataToWebhook(data: string, chatId: number) {
     const response = await axios.post(webhookUrl, data, { headers: headers });
     console.log("Data sent to webhook successfully. Response:", response.data);
 
-    // Notify the user of the response from the webhook
-    await notifyUser(chatId, `Received response from webhook: ${response.data}`);
+    // Send the JSON response to the user
+    await notifyUser(chatId, response.data);
   } catch (error) {
-    // Error logging as before
-    console.error('An error occurred while sending data to the webhook:');
-    logErrorToFile(`An error occurred while sending data to the webhook: ${error}`);
     if (axios.isAxiosError(error)) {
-      if (error.response) {
-        console.error('Response error:', {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          headers: error.response.headers,
-          data: error.response.data
-        });
-      } else if (error.request) {
-        console.error('No response received, request details:', error.request);
+      // Check for a 422 status code and send a tailored message
+      if (error.response && error.response.status === 422) {
+        await notifyUser(chatId, "The server understood the request but was unable to process the command due to syntax errors or invalid data. Error code 422");
       } else {
-        console.error('Error setting up the request:', error.message);
+        // Handle other errors
+        await notifyUser(chatId, `An error occurred while sending data to the webhook.`);
       }
+      console.error('An error occurred while sending data to the webhook:', error);
+      logErrorToFile(`An error occurred while sending data to the webhook: ${error}`);
     } else {
+      // Non-Axios error
       console.error(error);
+      logErrorToFile(`An unexpected error occured while sending webhook data: ${error}`);
+      await notifyUser(chatId, "An unexpected error occurred while sending webhook data.");
     }
-
-    // Notify the user that an error occurred
-    await notifyUser(chatId, `An error occurred while sending data to the webhook:\n ${error}`);
   }
 }
 
 // Wrapper function to send messages to the user
-async function notifyUser(chatId: number, message: string, isMultiline: boolean = false) {
+async function notifyUser(chatId: number, message: any) {
   try {
-    const formattedMessage = isMultiline ? `\`\`\`${message}\`\`\`` : `\`${message}\``;
+    // Check if the message is an object and format as JSON string
+    const formattedMessage = typeof message === 'object' ? 
+      `\`\`\`json\n${JSON.stringify(message, null, 2)}\n\`\`\`` : 
+      `\`${message}\``;
+
     await bot.api.sendMessage(chatId, formattedMessage, { parse_mode: 'MarkdownV2' });
-    await bot.api.sendMessage(chatId, message);
   } catch (error) {
     console.error(`Failed to send message to user: ${error}`);
     logErrorToFile(`Failed to send message to user: ${error}`);

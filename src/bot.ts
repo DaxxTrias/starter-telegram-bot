@@ -5,18 +5,48 @@ import express, { Request, Response } from "express";
 import { applyTextEffect, Variant } from "./textEffects";
 import axios from 'axios';
 import type { Variant as TextEffectVariant } from "./textEffects";
+import fs from 'fs';
+import path from 'path';
+
+// Startup Constants
+const logsDirectory = path.join(__dirname, '..', 'logs');
+const errorLogPath = path.join(logsDirectory, 'errors.txt');
+
+// Ensure the logs directory exists
+if (!fs.existsSync(logsDirectory)) {
+  fs.mkdirSync(logsDirectory, { recursive: true });
+}
+
+// Ensure the log file exists
+if (!fs.existsSync(errorLogPath)) {
+  fs.writeFileSync(errorLogPath, ''); // Create an empty log file if it does not exist
+}
+
+// initial env file validation
+if (!process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_TOKEN === "") {
+  logErrorToFile("No Telegram token provided. Please set the TELEGRAM_TOKEN environment variable in the .env file.");
+  console.warn("No Telegram token provided. Please set the TELEGRAM_TOKEN environment variable in the .env file.");
+  process.exit(1);
+}
+
+// logging function
+function logErrorToFile(error: string) {
+  const timestamp = new Date().toISOString();
+  const logMessage = `${timestamp}\n- ${error}\n`;
+  fs.appendFileSync(errorLogPath, logMessage);
+}
 
 // Constants and Type Definitions
 const bot = new Bot(process.env.TELEGRAM_TOKEN || "");
 const PORT = process.env.PORT || 3005;
-const webhookUrl = process.env.WEBHOOK_URL || 'http://localhost:3005/webhook';
+const webhookUrl = process.env.WEBHOOK_URL || "http://localhost:3005/webhook";
 const app = express();
 const allEffects: { code: TextEffectVariant; label: string }[] = [
   { code: 'w', label: 'Monospace' }, { code: 'b', label: 'Bold' },
   { code: 'i', label: 'Italic' }, { code: 'd', label: 'Doublestruck' },
   { code: 'o', label: 'Circled' }, { code: 'q', label: 'Squared' }
 ];
-const introductionMessage = `Hello! I'm a Telegram bot to help facilitate utilizing Webhooks`;
+const introductionMessage = "Hello! I'm a Telegram bot to help facilitate utilizing Webhooks";
 const aboutUrlKeyboard = new InlineKeyboard().url("Website URL", "https://www.google.com/");
 
 // Helper Functions
@@ -32,15 +62,19 @@ const textEffectResponse = (original: string, modified?: string) => `Original: $
 
 // Exception Handlers
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception: ', error);
+  const errorMessage = `Uncaught Exception: ${error.message}`;
+  console.error(errorMessage);
+  logErrorToFile(errorMessage);
   // todo: good spot to perform cleanup of operations / open handles
   // todo: maybe restart automatically?
   process.exit(1);
 });
-
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  const errorMessage = `Unhandled Rejection at: ${promise}, reason: ${reason}`;
+  logErrorToFile(errorMessage);
+  console.error(errorMessage);
   // todo: more extensive logging here if desired
+  // maybe shutdown gracefully
 });
 
 // Bot Command Handlers
@@ -129,11 +163,11 @@ async function sendDataToWebhook(data: string) {
     };
 
     // Log the payload before sending
-    console.log('Sending the following data to the webhook:');
-    console.log('Payload:', data);
+    console.log("Sending the following data to the webhook:");
+    console.log("Payload:", data);
 
     await axios.post(webhookUrl, data, { headers: headers });
-    console.log('Data sent to webhook successfully.');
+    console.log("Data sent to webhook successfully.");
   } catch (error) {
     // Error logging as before
     console.error('An error occurred while sending data to the webhook:');

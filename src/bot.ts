@@ -148,18 +148,6 @@ app.post(`/webhook`, async (req: Request, res: Response) => {
   res.status(200).send(`data recvd`);
 });
 
-// Bot Server Start Logic
-if (process.env.NODE_ENV === 'production') {
-  console.log('Webhook URL from .env:', process.env.WEBHOOK_URL);
-  app.use(express.json());
-  app.use(webhookCallback(bot, 'express'));
-  app.listen(PORT, () => console.log(`Bot listening on port ${PORT}`));
-  bot.start();
-} else {
-  bot.start();
-  console.log('Bot started in long polling mode without webhooks');
-}
-
 // Webhook Send Functions
 async function sendDataToWebhook(data: string, chatId: number) {
   try {
@@ -200,16 +188,30 @@ async function sendDataToWebhook(data: string, chatId: number) {
     }
 
     // Notify the user that an error occurred
-    await notifyUser(chatId, `An error occurred while sending data to the webhook.`);
+    await notifyUser(chatId, `An error occurred while sending data to the webhook:\n ${error}`);
   }
 }
 
 // Wrapper function to send messages to the user
-async function notifyUser(chatId: number, message: string) {
+async function notifyUser(chatId: number, message: string, isMultiline: boolean = false) {
   try {
+    const formattedMessage = isMultiline ? `\`\`\`${message}\`\`\`` : `\`${message}\``;
+    await bot.api.sendMessage(chatId, formattedMessage, { parse_mode: 'MarkdownV2' });
     await bot.api.sendMessage(chatId, message);
   } catch (error) {
     console.error(`Failed to send message to user: ${error}`);
     logErrorToFile(`Failed to send message to user: ${error}`);
   }
+}
+
+// Bot Server Start Logic
+if (process.env.NODE_ENV === 'production') {
+  console.log('Webhook URL from .env:', process.env.WEBHOOK_URL);
+  app.use(express.json());
+  app.use(webhookCallback(bot, 'express'));
+  app.listen(PORT, () => console.log(`Bot listening on port ${PORT}`));
+  bot.start();
+} else {
+  bot.start();
+  console.log('Bot started in long polling mode without webhooks');
 }

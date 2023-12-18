@@ -87,6 +87,7 @@ bot.command('webhook', async ctx => {
 
   // now call the sendDataToWebhook function with the chatId and data
   await sendDataToWebhook(data, chatId);
+});
 
 // Inline Query Handler
 bot.inlineQuery(/effect (monospace|bold|italic) (.*)/, async (ctx) => {
@@ -164,7 +165,7 @@ async function sendDataToWebhook(data: string, chatId: number) {
   try {
     const headers = {
       'Content-Type': 'text/plain',
-      /// mimicing postman user-agent to try and avoid 403 error from cloudfront
+      // mimicing postman user-agent to avoid 403 error from cloudfront
       'User-Agent': 'PostmanRuntime/7.36.0'
     };
 
@@ -177,7 +178,6 @@ async function sendDataToWebhook(data: string, chatId: number) {
 
     // Notify the user of the response from the webhook
     await notifyUser(chatId, `Received response from webhook: ${response.data}`);
-
   } catch (error) {
     // Error logging as before
     console.error('An error occurred while sending data to the webhook:');
@@ -200,7 +200,7 @@ async function sendDataToWebhook(data: string, chatId: number) {
     }
 
     // Notify the user that an error occurred
-    await notifyUser(chatId, `Received response from webhook: ${response.data}`);
+    await notifyUser(chatId, `An error occurred while sending data to the webhook.`);
   }
 }
 
@@ -212,4 +212,4 @@ async function notifyUser(chatId: number, message: string) {
     console.error(`Failed to send message to user: ${error}`);
     logErrorToFile(`Failed to send message to user: ${error}`);
   }
-}});
+}

@@ -5,57 +5,66 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 
-// Startup Constants
+// File System Utility Functions
 const logsDirectory = path.join(__dirname, '..', 'logs');
 const errorLogPath = path.join(logsDirectory, 'errors.txt');
+ensureDirectoryExists(logsDirectory);
+ensureFileExists(errorLogPath);
 
-// Ensure the logs directory exists
-if (!fs.existsSync(logsDirectory)) {
-  fs.mkdirSync(logsDirectory, { recursive: true });
+function ensureDirectoryExists(dirPath: string) {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
 }
 
-// Ensure the log file exists
-if (!fs.existsSync(errorLogPath)) {
-  fs.writeFileSync(errorLogPath, ''); // Create an empty log file if it does not exist
+function ensureFileExists(filePath: string) {
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, '');
+  }
 }
 
-// Initial env file validation
-if (!process.env.TELEGRAM_TOKEN || process.env.TELEGRAM_TOKEN === "") {
-  logErrorToFile("No Telegram token provided. Please set the TELEGRAM_TOKEN environment variable in the .env file.");
-  console.warn("No Telegram token provided. Please set the TELEGRAM_TOKEN environment variable in the .env file.");
-  process.exit(1);
-}
-
-// Logging function
+// Logging Function
 function logErrorToFile(error: string) {
   const timestamp = new Date().toISOString();
-  const logMessage = `${timestamp}\n- ${error}\n`;
-  fs.appendFileSync(errorLogPath, logMessage);
+  const logMessage = `${timestamp} - ${error}\n`;
+  try {
+    fs.appendFileSync(errorLogPath, logMessage);
+  } catch (fileError) {
+    console.error('Failed to log error to file:', fileError);
+  }
 }
 
-// TG Bot Constants and Type Definitions
-const bot = new Bot(process.env.TELEGRAM_TOKEN || "");
+// Environment Validation
+validateEnvironmentVariable('TELEGRAM_TOKEN');
+validateEnvironmentVariable('WEBHOOK_URL');
+
+function validateEnvironmentVariable(name: string) {
+  if (!process.env[name]) {
+    const message = `Environment variable ${name} is missing from the '.env' file.`;
+    logErrorToFile(message);
+    console.warn(message);
+    process.exit(1);
+  }
+}
+
+// Bot Setup
+const bot = new Bot(process.env.TELEGRAM_TOKEN as string);
 const PORT = process.env.PORT || 3005;
-const webhookUrl = process.env.WEBHOOK_URL || "http://localhost:3005/webhook";
 const app = express();
+const webhookUrl = process.env.WEBHOOK_URL || "http://localhost:3005/webhook";
 const introductionMessage = "Hello! I'm a Telegram bot to help facilitate utilizing Webhooks.";
 const aboutUrlKeyboard = new InlineKeyboard().url("Website URL", "https://www.google.com/");
 
 // Exception Handlers
-process.on('uncaughtException', (error) => {
-  const errorMessage = `Uncaught Exception: ${error.message}`;
-  console.error(errorMessage);
+process.on('uncaughtException', handleError);
+process.on('unhandledRejection', handleError);
+
+function handleError(error: Error | null, promise?: Promise<any>) {
+  const errorMessage = error ? error.toString() : 'Unhandled promise rejection';
   logErrorToFile(errorMessage);
-  // todo: good spot to perform cleanup of operations / open handles
-  // todo: maybe restart automatically?
+  console.error(errorMessage, promise);
   process.exit(1);
-});
-process.on('unhandledRejection', (reason, promise) => {
-  const errorMessage = `Unhandled Rejection at: ${promise}, reason: ${reason}`;
-  logErrorToFile(errorMessage);
-  console.error(errorMessage);
-  // todo: more extensive logging here if desired maybe shutdown gracefully aswell
-});
+}
 
 // Bot Command Handlers
 bot.command('start', ctx => ctx.reply(introductionMessage, {reply_markup: aboutUrlKeyboard, parse_mode: 'HTML'}));
@@ -128,13 +137,13 @@ async function notifyUser(chatId: number, message: any) {
 }
 
 // Bot Server Start Logic
-if (process.env.NODE_ENV === 'production') {
-  console.log('Webhook URL from .env:', process.env.WEBHOOK_URL);
-  app.use(express.json());
-  app.use(webhookCallback(bot, 'express'));
-  app.listen(PORT, () => console.log(`Bot listening on port ${PORT}`));
+startBotServer();
+
+function startBotServer() {
+  if (process.env.NODE_ENV === 'production') {
+    app.use(express.json());
+    app.use(webhookCallback(bot, 'express'));
+    app.listen(PORT, () => console.log(`Bot listening on port ${PORT}`));
+  }
   bot.start();
-} else {
-  bot.start();
-  console.log('Bot started in long polling mode without webhooks');
 }

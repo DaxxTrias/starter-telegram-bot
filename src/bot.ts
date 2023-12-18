@@ -117,28 +117,47 @@ if (process.env.NODE_ENV === 'production') {
   bot.start();
 } else {
   bot.start();
-  console.log('Bot started in long polling mode');
+  console.log('Bot started in long polling mode without webhooks');
 }
 
 // Webhook Send Functions
 async function sendDataToWebhook(data: string) {
   try {
-    await axios.post(webhookUrl, { data }, { headers: {  'Content-Type': 'application/json' }});
-    console.log('data sent to webhook');
+    const headers = {
+      'Content-Type': 'text/plain',
+      'User-Agent': 'PostmanRuntime/7.36.0' // mimicing postman user-agent to try and avoid 403
+    };
+    const payload = { data };
+
+    // Log the payload and headers before sending
+    console.log('Sending the following data to the webhook:');
+    console.log('Payload:', JSON.stringify(payload, null, 2));
+    console.log('Headers:', headers);
+
+    await axios.post(webhookUrl, payload, { headers: headers});
+    console.log('data sent to webhook successfully');
   } catch (error) {
+    // Improved error logging
+    console.error('An error occurred while sending data to the webhook:');
     if (axios.isAxiosError(error)) {
-      console.error(error.response?.data);
       if (error.response) {
-        console.error(`status:`, error.response.status);
-        console.error(`data:`, error.response.data);
-        console.error(`headers:`, error.response.headers);
+        // Log detailed response error
+        console.error('Response error:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          headers: error.response.headers,
+          data: error.response.data
+        });
       } else if (error.request) {
-        console.error(`no response received:`, error.request);
+        // Log request details if no response
+        console.error('No response received, request details:', error.request);
       } else {
-        console.error(`error setting up request:`, error.message);
+        // Log the error message if request setup failed
+        console.error('Error setting up the request:', error.message);
       }
     } else {
-      console.error('Error occured: ', error);
+      // Log error if it's not an AxiosError
+      console.error(error);
     }
   }
 }

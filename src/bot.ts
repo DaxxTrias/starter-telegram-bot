@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// This file is part of <telegram-webhook>, which is licensed under the MIT License.
+// See LICENSE file in the project root for full license text.
 require('dotenv').config();
 import { Bot, InlineKeyboard, webhookCallback } from "grammy";
 import express, { Request, Response } from "express";

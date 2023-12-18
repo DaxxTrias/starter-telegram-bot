@@ -127,21 +127,18 @@ async function sendDataToWebhook(data: string) {
       'Content-Type': 'text/plain',
       'User-Agent': 'PostmanRuntime/7.36.0' // mimicing postman user-agent to try and avoid 403
     };
-    const payload = { data };
 
-    // Log the payload and headers before sending
+    // Log the payload before sending
     console.log('Sending the following data to the webhook:');
-    console.log('Payload:', JSON.stringify(payload, null, 2));
-    console.log('Headers:', headers);
+    console.log('Payload:', data);
 
-    await axios.post(webhookUrl, payload, { headers: headers});
-    console.log('data sent to webhook successfully');
+    await axios.post(webhookUrl, data, { headers: headers });
+    console.log('Data sent to webhook successfully.');
   } catch (error) {
-    // Improved error logging
+    // Error logging as before
     console.error('An error occurred while sending data to the webhook:');
     if (axios.isAxiosError(error)) {
       if (error.response) {
-        // Log detailed response error
         console.error('Response error:', {
           status: error.response.status,
           statusText: error.response.statusText,
@@ -149,14 +146,11 @@ async function sendDataToWebhook(data: string) {
           data: error.response.data
         });
       } else if (error.request) {
-        // Log request details if no response
         console.error('No response received, request details:', error.request);
       } else {
-        // Log the error message if request setup failed
         console.error('Error setting up the request:', error.message);
       }
     } else {
-      // Log error if it's not an AxiosError
       console.error(error);
     }
   }

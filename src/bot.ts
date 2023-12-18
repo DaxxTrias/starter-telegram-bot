@@ -36,7 +36,7 @@ function logErrorToFile(error: string) {
   fs.appendFileSync(errorLogPath, logMessage);
 }
 
-// Constants and Type Definitions
+// Bot Constants and Type Definitions
 const bot = new Bot(process.env.TELEGRAM_TOKEN || "");
 const PORT = process.env.PORT || 3005;
 const webhookUrl = process.env.WEBHOOK_URL || "http://localhost:3005/webhook";
@@ -46,7 +46,7 @@ const allEffects: { code: TextEffectVariant; label: string }[] = [
   { code: 'i', label: 'Italic' }, { code: 'd', label: 'Doublestruck' },
   { code: 'o', label: 'Circled' }, { code: 'q', label: 'Squared' }
 ];
-const introductionMessage = "Hello! I'm a Telegram bot to help facilitate utilizing Webhooks";
+const introductionMessage = "Hello! I'm a Telegram bot to help facilitate utilizing Webhooks.";
 const aboutUrlKeyboard = new InlineKeyboard().url("Website URL", "https://www.google.com/");
 
 // Helper Functions
@@ -73,8 +73,7 @@ process.on('unhandledRejection', (reason, promise) => {
   const errorMessage = `Unhandled Rejection at: ${promise}, reason: ${reason}`;
   logErrorToFile(errorMessage);
   console.error(errorMessage);
-  // todo: more extensive logging here if desired
-  // maybe shutdown gracefully
+  // todo: more extensive logging here if desired maybe shutdown gracefully aswell
 });
 
 // Bot Command Handlers

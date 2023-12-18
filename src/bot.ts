@@ -80,7 +80,13 @@ process.on('unhandledRejection', (reason, promise) => {
 bot.command('yo', (ctx) => ctx.reply(`Yo ${ctx.from?.username}`));
 bot.command('effect', ctx => ctx.reply(textEffectResponse(ctx.match), { reply_markup: createInlineKeyboard(allEffects.map(e => e.code)) }));
 bot.command('start', ctx => ctx.reply(introductionMessage, {reply_markup: aboutUrlKeyboard, parse_mode: 'HTML'}));
-bot.command('webhook', ctx => sendDataToWebhook(ctx.match));
+// bot.command('webhook', ctx => sendDataToWebhook(ctx.match));
+bot.command('webhook', async ctx => {
+  const chatId = ctx.chat.id; // Get the chat ID of the user
+  const data = ctx.match; // Get the data supplied to the command)
+
+  // now call the sendDataToWebhook function with the chatId and data
+  await sendDataToWebhook(data, chatId);
 
 // Inline Query Handler
 bot.inlineQuery(/effect (monospace|bold|italic) (.*)/, async (ctx) => {
@@ -135,7 +141,7 @@ allEffects.forEach(effect => bot.callbackQuery(effectCallbackCodeAccessor(effect
   { reply_markup: createInlineKeyboard(allEffects.map(e => e.code).filter(code => code !== effect.code)) });
 }));
 
-// Webhook Route
+// Webhook Routing Function
 app.post(`/webhook`, async (req: Request, res: Response) => {
   console.log(`webhook triggered: `, req.body);
   res.status(200).send(`data recvd`);
@@ -154,22 +160,28 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Webhook Send Functions
-async function sendDataToWebhook(data: string) {
+async function sendDataToWebhook(data: string, chatId: number) {
   try {
     const headers = {
       'Content-Type': 'text/plain',
-      'User-Agent': 'PostmanRuntime/7.36.0' // mimicing postman user-agent to try and avoid 403
+      /// mimicing postman user-agent to try and avoid 403 error from cloudfront
+      'User-Agent': 'PostmanRuntime/7.36.0'
     };
 
     // Log the payload before sending
     console.log("Sending the following data to the webhook:");
     console.log("Payload:", data);
 
-    await axios.post(webhookUrl, data, { headers: headers });
-    console.log("Data sent to webhook successfully.");
+    const response = await axios.post(webhookUrl, data, { headers: headers });
+    console.log("Data sent to webhook successfully. Response:", response.data);
+
+    // Notify the user of the response from the webhook
+    await notifyUser(chatId, `Received response from webhook: ${response.data}`);
+
   } catch (error) {
     // Error logging as before
     console.error('An error occurred while sending data to the webhook:');
+    logErrorToFile(`An error occurred while sending data to the webhook: ${error}`);
     if (axios.isAxiosError(error)) {
       if (error.response) {
         console.error('Response error:', {
@@ -186,5 +198,18 @@ async function sendDataToWebhook(data: string) {
     } else {
       console.error(error);
     }
+
+    // Notify the user that an error occurred
+    await notifyUser(chatId, `Received response from webhook: ${response.data}`);
   }
 }
+
+// Wrapper function to send messages to the user
+async function notifyUser(chatId: number, message: string) {
+  try {
+    await bot.api.sendMessage(chatId, message);
+  } catch (error) {
+    console.error(`Failed to send message to user: ${error}`);
+    logErrorToFile(`Failed to send message to user: ${error}`);
+  }
+}});

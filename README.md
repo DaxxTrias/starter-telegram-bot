@@ -10,18 +10,26 @@ Transformed & remade from [starter-telegram-bot](https://github.com/cyclic-softw
 - Yarn.
 - [Telegram Client](https://desktop.telegram.org/).
 
+### Get your bot token
+
+- Grab your Telegram bot's API token by sending a message to [\@BotFather](https://telegram.me/BotFather).
+
+<p align="center">
+    <img src="./assets/creating-telegram-bot-api-token.gif" alt="Send /newbot to @BotFather to create a new bot and get its API token." />
+</p>
+
 ### Local installation
 
-1. Clone the repository to your machine: `git clone https://github.com/DaxxTrias/telegram-webhook && cd telegram-webhook`
-2. Grab your bot's API token by messaging [\@BotFather](https://telegram.me/BotFather). (see above)
-3. Create the file `.env` and add the following line:
+- Clone the repository to your machine from command prompt or terminal: `git clone https://github.com/DaxxTrias/telegram-webhook && cd telegram-webhook`
+- Take your key from messaging [\@BotFather](https://telegram.me/BotFather). (see above)
+- Rename the file `.env.sample` to `.env` and edit the lines inside to suit your needs:
 
 ```bash
 TELEGRAM_TOKEN=... # YOUR TELEGRAM API TOKEN
 ```
 
-4. Download dependencies: `yarn`
-5. Start your bot: `yarn dev`
+- Download dependencies: `yarn`
+- Start your bot: `yarn dev`
 
 ## Usage Examples
 

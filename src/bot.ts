@@ -95,37 +95,20 @@ async function sendDataToWebhook(data: string, chatId: number) {
     };
 
     // Log the payload before sending
-    console.log("Sending the following data to the webhook:");
-    console.log("Payload:", data);
-
+    console.log("Sending data to the webhook...");
+    console.log("Payload: ", data);
     const response = await axios.post(webhookUrl, data, { headers: headers });
     console.log("Data sent to webhook successfully. Response:", response.data);
 
     // Send the JSON response to the user
     await notifyUser(chatId, response.data);
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      // Check for a 422 status code and send a tailored message
-      if (error.response && error.response.status === 422) {
-        let userMessage = `${error.response.data.message}\n`;
-        userMessage += `Response Code: ${error.response.status}\n`;
-        userMessage += `Response Status: ${error.response.statusText}\n`;
-        userMessage += `Command: ${error.response.data.command}\n`;
-        await notifyUser(chatId, "The server understood and responded with:\n" + userMessage);
-      } else {
-        // Handle other errors
-        await notifyUser(chatId, `An error occurred while sending data to the webhook.`);
-      }
-      console.log('An error occurred while sending data to the webhook.');
-      console.error('Code: \n', error.code);
-      console.error('Response: \n', error.response);
-      logErrorToFile(`An error occurred while sending data to the webhook. Code: ${error.code} \n ${error}`);
-    } else {
-      // Non-Axios error
-      console.error(`An Unexpected error has occured: ${error}`);
-      logErrorToFile(`An unexpected error occured while sending webhook data: ${error}`);
-      await notifyUser(chatId, "An unexpected error occurred while sending webhook data.");
-    }
+    // Handle errors using the helper function
+    const errorMessage = processErrorResponse(error, chatId);
+    await notifyUser(chatId, errorMessage);
+
+    console.error('An error occurred while sending data to the webhook:\n', error);
+    logErrorToFile(`An error occurred while sending data to the webhook:\n${error}`);
   }
 }
 
@@ -141,6 +124,26 @@ async function notifyUser(chatId: number, message: any) {
   } catch (error) {
     console.error(`Failed to send message to user: ${error}`);
     logErrorToFile(`Failed to send message to user: ${error}`);
+  }
+}
+
+// Error Handling Helper Function
+function processErrorResponse(error: any, chatId: number): string {
+  if (axios.isAxiosError(error) && error.response) {
+    let userMessage = `Response Code: ${error.response.status}\n`;
+    userMessage += `Response Status: ${error.response.statusText}\n`;
+
+    // Check if the response data is a string and parse it as JSON
+    const errorData = typeof error.response.data === 'string' ? JSON.parse(error.response.data) : error.response.data;
+
+    // Extract 'message' and 'command' from errorData if available
+    if (errorData.command) userMessage += `Command: ${errorData.command}\n`;
+    if (errorData.message) userMessage += `Message: ${errorData.message}\n`;
+
+    return "The server understood and responded with:\n" + userMessage;
+  } else {
+    // Generic error message for non-Axios errors
+    return "An unexpected error occurred while sending webhook data.";
   }
 }
 

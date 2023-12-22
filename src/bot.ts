@@ -107,21 +107,22 @@ async function sendDataToWebhook(data: string, chatId: number) {
     if (axios.isAxiosError(error)) {
       // Check for a 422 status code and send a tailored message
       if (error.response && error.response.status === 422) {
-        await notifyUser(chatId, "The server understood the request but was unable to process the command due to syntax errors or invalid data." +
-        "\nError code 422");
+        let userMessage = `${error.response.data.message}\n`;
+        userMessage += `Response Code: ${error.response.status}\n`;
+        userMessage += `Response Status: ${error.response.statusText}\n`;
+        userMessage += `Command: ${error.response.data.command}\n`;
+        await notifyUser(chatId, "The server understood and responded with:\n" + userMessage);
       } else {
         // Handle other errors
         await notifyUser(chatId, `An error occurred while sending data to the webhook.`);
       }
       console.log('An error occurred while sending data to the webhook.');
       console.error('Code: \n', error.code);
-      // console.error('Config: \n', error.config);
-      // console.error('Request: \n', error.request);
       console.error('Response: \n', error.response);
       logErrorToFile(`An error occurred while sending data to the webhook. Code: ${error.code} \n ${error}`);
     } else {
       // Non-Axios error
-      console.error(error);
+      console.error(`An Unexpected error has occured: ${error}`);
       logErrorToFile(`An unexpected error occured while sending webhook data: ${error}`);
       await notifyUser(chatId, "An unexpected error occurred while sending webhook data.");
     }

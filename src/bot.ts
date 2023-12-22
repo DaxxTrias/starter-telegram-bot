@@ -113,8 +113,12 @@ async function sendDataToWebhook(data: string, chatId: number) {
         // Handle other errors
         await notifyUser(chatId, `An error occurred while sending data to the webhook.`);
       }
-      console.error('An error occurred while sending data to the webhook:', error);
-      logErrorToFile(`An error occurred while sending data to the webhook: ${error}`);
+      console.log('An error occurred while sending data to the webhook.');
+      console.error('Code: \n', error.code);
+      // console.error('Config: \n', error.config);
+      // console.error('Request: \n', error.request);
+      console.error('Response: \n', error.response);
+      logErrorToFile(`An error occurred while sending data to the webhook. Code: ${error.code} \n ${error}`);
     } else {
       // Non-Axios error
       console.error(error);

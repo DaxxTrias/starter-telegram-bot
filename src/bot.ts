@@ -95,10 +95,9 @@ async function sendDataToWebhook(data: string, chatId: number) {
     };
 
     // Log the payload before sending
-    console.log("Sending data to the webhook...");
-    console.log("Payload: ", data);
+    console.log("Sending data to the webhook...\nPayload: ", data);
     const response = await axios.post(webhookUrl, data, { headers: headers });
-    console.log("Data sent to webhook successfully. Response:", response.data);
+    console.log("Data sent to webhook successfully.\nResponse:", response.data);
 
     // Send the JSON response to the user
     await notifyUser(chatId, response.data);

@@ -99,8 +99,19 @@ async function sendDataToWebhook(data: string, chatId: number) {
     const response = await axios.post(webhookUrl, data, { headers: headers });
     console.log("Data sent to webhook successfully.\nResponse:", response.data);
 
-    // Send the JSON response to the user
-    await notifyUser(chatId, response.data);
+    // Parse JSON response and extract required fields
+    const jsonResponse = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+    const { type, side, price, amount } = jsonResponse;
+
+    // Extract ordStatus from the nested info object
+    const ordStatus = jsonResponse.info?.ordStatus;
+    const symbol = jsonResponse.info?.symbol;
+
+    // Format the output
+    const formattedResponse = `Symbol: ${symbol}\nType: ${type}  Side: ${side}\nPrice: ${price}  Amount: ${amount}\nOrder Status: ${ordStatus}`;
+
+    // Send the formatted response to the user
+    await notifyUser(chatId, formattedResponse);
   } catch (error) {
     // Handle errors using the helper function
     const errorMessage = processErrorResponse(error, chatId);

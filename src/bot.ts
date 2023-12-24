@@ -107,11 +107,19 @@ async function sendDataToWebhook(data: string, chatId: number) {
     const ordStatus = jsonResponse.info?.ordStatus;
     const symbol = jsonResponse.info?.symbol;
 
-    // Format the output
-    const formattedResponse = `Symbol: ${symbol}\nType: ${type}  Side: ${side}\nPrice: ${price}  Amount: ${amount}\nOrder Status: ${ordStatus}`;
+    if (symbol == undefined)
+    {
+      // Send user raw JSON msg
+      await notifyUser(chatId, response.data);
+    }
+    else
+    {
+      // Format the output
+      const formattedResponse = `Symbol: ${symbol}\nType: ${type}  Side: ${side}\nPrice: ${price}  Amount: ${amount}\nOrder Status: ${ordStatus}`;
 
-    // Send the formatted response to the user
-    await notifyUser(chatId, formattedResponse);
+      // Send the formatted response to the user
+      await notifyUser(chatId, formattedResponse);
+    }
   } catch (error) {
     // Handle errors using the helper function
     const errorMessage = processErrorResponse(error, chatId);
